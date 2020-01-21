@@ -21,6 +21,9 @@ import           Polysemy.Error
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Reader as R
 
+import qualified Control.Monad.Freer.Error as FE
+import qualified Control.Monad.Freer as F
+
 {- ############# polysemy ################ -}
 
 data Resource (m :: * -> *) a where
@@ -58,6 +61,24 @@ instance E.MonadError String m => MonadResource (ResourceT m) where
 result2 :: Either String Int
 result2 = runResourceT program2
 {- Right 1 -}
+
+{- ######### Free ########### -}
+
+data ResourceF a where
+  GetInt' :: ResourceF Int
+
+getInt'' :: F.Member ResourceF effs => F.Eff effs Int
+getInt'' = F.send GetInt'
+
+program3 :: (F.Member ResourceF effs, F.Member (FE.Error String) effs) => F.Eff effs Int
+program3 = getInt'' `FE.catchError` \(_ :: String) -> pure 1
+
+runErroringInt' :: F.Member (FE.Error String) effs => F.Eff (ResourceF ': effs) a -> F.Eff effs a
+runErroringInt' = F.interpret $ \GetInt' -> FE.throwError "bar"
+
+result3 :: Either String Int
+result3 = F.run $ FE.runError $ runErroringInt' program3
+{- Left "bar" -}
 
 main :: IO ()
 main = undefined

@@ -19,4 +19,5 @@ executable poly
                      , polysemy
                      , polysemy-plugin
                      , mtl
+                     , freer-simple
   ghc-options:         -fplugin=Polysemy.Plugin
