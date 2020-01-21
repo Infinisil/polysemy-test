@@ -7,6 +7,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeOperators       #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Main where
 
@@ -36,13 +41,23 @@ result = run $ runError $ runErroringInt $ program
 
 {- ######### MTL ########### -}
 
-program2 :: (E.MonadError String m, R.MonadReader Int m) => m Int
-program2 = do
-  R.ask `E.catchError` const (pure 1)
+class MonadResource m where
+  getInt' ::  m Int
+
+program2 :: (E.MonadError String m, MonadResource m) => m Int
+program2 = getInt' `E.catchError` const (pure 1)
+
+newtype ResourceT m a = ResourceT { runResourceT :: m a }
+  deriving (Functor, Applicative, Monad)
+
+deriving instance E.MonadError e m => E.MonadError e (ResourceT m)
+
+instance E.MonadError String m => MonadResource (ResourceT m) where
+  getInt' = ResourceT $ E.throwError "foo"
 
 result2 :: Either String Int
-result2 = R.runReaderT program2 (error "error")
-{- Right *** Exception: error -}
+result2 = runResourceT program2
+{- Right 1 -}
 
 main :: IO ()
 main = undefined
