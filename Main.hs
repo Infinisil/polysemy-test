@@ -28,11 +28,11 @@ program = getInt `catch` const (pure 1)
 
 runErroringInt :: Member (Error String) r => Sem (Resource ': r) a -> Sem r a
 runErroringInt = interpret \case
-  GetInt -> error "error"
+  GetInt -> throw "error"
 
 result :: Either String Int
 result = run $ runError $ runErroringInt $ program
-{- *** Exception: error -}
+{- Right 1 -}
 
 {- ######### MTL ########### -}
 
